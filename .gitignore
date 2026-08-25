@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.test-tmp/
+pytest-cache-files-*/
+*.pyc
+.env
+*.log
+.codex/
+.agents/
+dist/
+build/
+*.egg-info/
+# Planilhas podem conter dados futuros sensíveis; versionamento deve ser deliberado.
+data/*
+!data/.gitkeep
+
+# Proteção adicional para arquivos tabulares locais.
+*.xlsx
+*.xls
+*.csv
+*.parquet
