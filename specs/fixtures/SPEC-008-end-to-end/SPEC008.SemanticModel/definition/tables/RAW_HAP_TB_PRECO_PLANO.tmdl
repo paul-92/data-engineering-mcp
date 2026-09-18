@@ -1,0 +1,30 @@
+/// Controlled SPEC-008 import from the approved XLSX fixture
+table RAW_HAP_TB_PRECO_PLANO
+	lineageTag: 8b85e6f3-0b19-42fe-aa05-f043761745a9
+
+	/// Approved proof field
+	column CD_TABELA
+		dataType: int64
+		lineageTag: 50a01e07-2e95-4730-a526-a9386648fdca
+		summarizeBy: none
+		sourceColumn: CD_TABELA
+
+	/// Approved proof field
+	column DS_TABELA
+		dataType: string
+		lineageTag: 8bab3d0b-cb24-4d88-8789-a0475eca7333
+		summarizeBy: none
+		sourceColumn: DS_TABELA
+
+	partition RAW_HAP_TB_PRECO_PLANO = m
+		mode: import
+		source =
+				let
+				    // Controlled SPEC-008 fixture/evidence source; not an operational user configuration.
+				    Source = Excel.Workbook(File.Contents("<fixture-source>/RAW_HAP_TB_PRECO_PLANO_SINTETICO.xlsx"), null, true),
+				    Sheet = Source{[Item="Exportar Planilha",Kind="Sheet"]}[Data],
+				    Promoted = Table.PromoteHeaders(Sheet, [PromoteAllScalars=true]),
+				    Selected = Table.SelectColumns(Promoted, {"CD_TABELA", "DS_TABELA"}),
+				    Typed = Table.TransformColumnTypes(Selected, {{"CD_TABELA", Int64.Type}, {"DS_TABELA", type text}})
+				in
+				    Typed

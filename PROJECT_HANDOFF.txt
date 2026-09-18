@@ -1,0 +1,2116 @@
+# PROJECT HANDOFF — DATA ENGINEERING MCP
+
+**Versão do Handoff:** 4
+**Checkpoint:** 2026-09-18
+**Projeto:** `data-engineering-mcp`
+**Tipo:** `MCP PRODUCT DEVELOPMENT HANDOFF`
+**Finalidade:** continuidade da construção, evolução, validação e finalização do próprio Data Engineering MCP, independentemente de provedor, modelo ou agente de IA.
+
+---
+
+# PARTE I — ESCOPO E FINALIDADE
+
+## 1. ESCOPO DESTE HANDOFF
+
+Este documento acompanha EXCLUSIVAMENTE:
+
+> A construção, evolução, validação e finalização do produto `data-engineering-mcp`.
+
+Ele registra o estado do desenvolvimento do próprio MCP.
+
+Este handoff NÃO é o contexto operacional dos projetos que futuramente utilizarão o MCP.
+
+Exemplos de projetos consumidores:
+
+- criação de um BI;
+- revisão de um BI existente;
+- geração de SQL para uma necessidade de negócio;
+- análise de dados;
+- modelagem de dados;
+- projeto Power BI;
+- projeto de engenharia de dados;
+- projeto de cliente;
+- qualquer outro produto construído utilizando o MCP.
+
+Esses projetos devem possuir handoffs próprios.
+
+---
+
+# 2. SEPARAÇÃO OBRIGATÓRIA DE CONTEXTOS
+
+Existem dois níveis diferentes de contexto.
+
+## NÍVEL 1 — MCP PRODUCT
+
+Representado por este documento:
+
+`PROJECT_HANDOFF_MCP.txt`
+
+Responsável por acompanhar:
+
+- arquitetura do MCP;
+- código do MCP;
+- tools;
+- testes;
+- metadata contract;
+- Specs do MCP;
+- PLANs do MCP;
+- HUMAN Gates do MCP;
+- evolução técnica do MCP;
+- validações do MCP;
+- limitações conhecidas do MCP;
+- finalização do MCP.
+
+---
+
+## NÍVEL 2 — CONSUMER PROJECT
+
+Cada projeto construído COM o MCP deve possuir seu próprio handoff.
+
+Formato recomendado:
+
+`PROJECT_HANDOFF_<PROJECT_NAME>.txt`
+
+Exemplos:
+
+`PROJECT_HANDOFF_BI_FINANCEIRO.txt`
+
+`PROJECT_HANDOFF_BI_BENEFICIARIOS.txt`
+
+`PROJECT_HANDOFF_ANALISE_CUSTOS.txt`
+
+Esses documentos devem acompanhar exclusivamente seus respectivos projetos.
+
+---
+
+# 3. PROIBIÇÃO DE CONTAMINAÇÃO DE CONTEXTO
+
+Não misturar no `PROJECT_HANDOFF_MCP`:
+
+- requisitos específicos de um BI;
+- regras de negócio de cliente;
+- medidas DAX de projeto consumidor;
+- layouts específicos;
+- tabelas escolhidas para determinado BI;
+- SQLs específicos de projeto;
+- decisões específicas de um dashboard;
+- Specs de projetos consumidores;
+- PLANs de projetos consumidores;
+- HUMAN Gates de projetos consumidores.
+
+Da mesma forma:
+
+um `PROJECT_HANDOFF_<PROJECT_NAME>` não deve carregar todo o histórico interno de desenvolvimento do MCP.
+
+O projeto consumidor pode referenciar o MCP como ferramenta/capacidade disponível.
+
+Não deve assumir sua história interna como contexto do projeto.
+
+---
+
+# 4. RELAÇÃO ENTRE OS CONTEXTOS
+
+Estrutura conceitual:
+
+`DATA ENGINEERING MCP`
+↓
+`PROJECT_HANDOFF_MCP.txt`
+↓
+`MCP FINALIZADO / OPERACIONAL`
+↓
+`MCP UTILIZADO COMO FERRAMENTA`
+↓
+`CONSUMER PROJECT`
+↓
+`PROJECT_HANDOFF_<PROJECT_NAME>.txt`
+
+O MCP é infraestrutura/capacidade.
+
+O projeto consumidor é outro contexto.
+
+---
+
+# 5. METODOLOGIA COMPARTILHÁVEL, ESTADO ISOLADO
+
+A metodologia pode ser reutilizada entre projetos.
+
+Exemplo:
+
+`REQUEST`
+↓
+`INSPECT`
+↓
+`CLASSIFY`
+↓
+`SPEC`
+↓
+`G1`
+↓
+`PLAN`
+↓
+`G2`
+↓
+`IMPLEMENT`
+↓
+`VERIFY`
+↓
+`EVIDENCE`
+↓
+`G4`
+
+Entretanto:
+
+> A metodologia pode ser compartilhada. O estado não.
+
+Cada projeto possui independentemente:
+
+- suas Specs;
+- seus PLANs;
+- seus Gates;
+- suas decisões HUMAN;
+- suas evidências;
+- seus riscos;
+- seus bloqueios;
+- seu CURRENT STATE;
+- seu NEXT ACTION;
+- seu próprio handoff.
+
+---
+
+# 6. FINALIDADE OPERACIONAL
+
+Este documento é o contexto portátil e canônico do desenvolvimento do MCP.
+
+Ele permite continuar o desenvolvimento em:
+
+- ChatGPT;
+- Codex;
+- Claude;
+- Gemini;
+- outro agente;
+- outro modelo;
+- outro provedor.
+
+sem depender da memória de uma conversa específica.
+
+O MCP deve carregar seu próprio contexto de desenvolvimento.
+
+---
+
+# 7. COMPONENTES DESTE DOCUMENTO
+
+Este handoff contém:
+
+### A. METHODOLOGY CONTRACT
+
+Como o MCP deve ser desenvolvido.
+
+### B. HANDOFF UPDATE CONTRACT
+
+Como este documento deve ser mantido.
+
+### C. MCP PRODUCT CONTRACT
+
+Invariantes técnicas do produto.
+
+### D. MCP PROJECT STATE
+
+Onde o desenvolvimento do MCP está.
+
+### E. RESUME INSTRUCTIONS
+
+Como outro agente deve assumir a construção do MCP.
+
+---
+
+# 8. REGRA DE AUTORIDADE
+
+Este documento é o checkpoint portátil oficial.
+
+Entretanto:
+
+> O estado verificável do repositório possui precedência sobre um checkpoint desatualizado.
+
+Ao assumir o MCP, reconciliar:
+
+`HANDOFF`
++
+`REPOSITORY`
++
+`WORKTREE`
++
+`TESTS`
++
+`EVIDENCE`
+
+Se houver divergência:
+
+não escolher silenciosamente.
+
+Investigar.
+
+Determinar o estado real.
+
+Atualizar o handoff.
+
+---
+
+# PARTE II — METHODOLOGY CONTRACT
+
+# 9. PRINCÍPIO FUNDAMENTAL
+
+> Menor solução que satisfaça a necessidade, menor Spec que permita implementá-la com segurança.
+
+Não criar:
+
+- arquitetura adicional;
+- abstração;
+- Feature;
+- Spec;
+- framework;
+- infraestrutura;
+- ferramenta;
+
+apenas porque poderia ser útil futuramente.
+
+Primeiro comprovar necessidade.
+
+Depois implementar a menor solução suficiente.
+
+---
+
+# 10. PAPEL DO HUMAN
+
+Princípio normativo:
+
+> HUMAN é autoridade, não orquestrador.
+
+O HUMAN:
+
+- define objetivos;
+- estabelece restrições;
+- toma decisões de produto;
+- aprova contratos;
+- resolve decisões genuinamente humanas;
+- exerce autoridade nos Gates.
+
+O HUMAN NÃO deve precisar:
+
+- conduzir cada comando;
+- dizer "continue" após cada atividade;
+- escolher cada arquivo técnico;
+- coordenar passos já autorizados;
+- repetir aprovações já concedidas.
+
+Depois de autorização suficiente, o agente avança automaticamente até:
+
+- concluir a etapa;
+- encontrar STOP CONDITION;
+- chegar ao próximo HUMAN Gate.
+
+---
+
+# 11. FLUXO CANÔNICO
+
+`REQUEST`
+↓
+`INSPECT`
+↓
+`CLASSIFY`
+↓
+`SPEC — somente se necessária`
+↓
+`G1 — HUMAN SPEC APPROVAL`
+↓
+`PLAN`
+↓
+`G2 — HUMAN IMPLEMENTATION AUTHORIZATION`
+↓
+`IMPLEMENT`
+↓
+`VERIFY`
+↓
+`EVIDENCE`
+↓
+`G4 — HUMAN ACCEPTANCE`
+↓
+`CLOSE`
+
+Gates condicionais:
+
+`G3 — SCOPE/BUDGET EXPANSION`
+
+`G5 — PUBLIC CONTRACT INCOMPATIBILITY`
+
+---
+
+# 12. REQUEST
+
+Todo trabalho começa por necessidade concreta.
+
+Compreender:
+
+- objetivo;
+- estado atual;
+- restrições;
+- resultado desejado.
+
+Não transformar automaticamente todo pedido em Spec.
+
+---
+
+# 13. INSPECT
+
+Regra:
+
+> INSPECT BEFORE PLAN.
+
+Antes de propor solução, inspecionar evidências.
+
+INSPECT é prioritariamente read-only.
+
+Pode envolver:
+
+- código;
+- testes;
+- arquitetura;
+- documentação;
+- metadata;
+- Git;
+- comportamento real;
+- ferramentas;
+- contratos;
+- evidências anteriores.
+
+INSPECT NÃO autoriza implementação.
+
+---
+
+# 14. CLASSIFY
+
+Após INSPECT:
+
+### SIMPLE
+
+Pode ser resolvida dentro de contrato existente.
+
+### STRUCTURAL
+
+Altera capacidade, arquitetura ou contrato relevante.
+
+Pode justificar Spec.
+
+### BLOCKED
+
+Falta evidência ou capacidade necessária.
+
+### HUMAN DECISION
+
+Existe decisão que deve permanecer humana.
+
+---
+
+# 15. SPEC PROPORTIONALITY
+
+Pergunta obrigatória:
+
+> A necessidade pode ser resolvida com segurança dentro de contrato existente?
+
+Se SIM:
+
+não criar Spec.
+
+Se NÃO:
+
+propor a menor Spec necessária.
+
+Novas ideias:
+
+- registrar;
+- classificar;
+- colocar em backlog quando apropriado;
+- avaliar posteriormente.
+
+Nunca incorporar silenciosamente.
+
+---
+
+# 16. ONE ACTIVE SPEC
+
+Por padrão:
+
+> ONE ACTIVE SPEC.
+
+Evitar mudanças estruturais paralelas desnecessárias.
+
+Objetivos:
+
+- reduzir deriva;
+- reduzir scope creep;
+- facilitar validação;
+- reduzir dependências;
+- reduzir consumo de créditos.
+
+---
+
+# 17. G1 — SPEC APPROVAL
+
+G1 significa:
+
+> HUMAN aprovou o contrato da Spec.
+
+G1 NÃO autoriza:
+
+- implementação;
+- commit;
+- push;
+- release;
+- deploy.
+
+Depois de G1:
+
+criar PLAN.
+
+Depois:
+
+`STOP_HUMAN — G2`
+
+---
+
+# 18. PLAN
+
+O PLAN define:
+
+- áreas/arquivos previstos;
+- orçamento;
+- sequência;
+- testes;
+- verificações;
+- riscos;
+- evidências;
+- STOP CONDITIONS;
+- Gates.
+
+Deve permanecer proporcional.
+
+---
+
+# 19. G2 — IMPLEMENTATION AUTHORIZATION
+
+G2 significa:
+
+> HUMAN autorizou a implementação do PLAN.
+
+Depois:
+
+`IMPLEMENT → VERIFY → EVIDENCE`
+
+automaticamente.
+
+Não solicitar "continue?" a cada passo.
+
+Parar somente em:
+
+- G3;
+- G5;
+- STOP_BLOCKED;
+- decisão HUMAN genuína;
+- G4.
+
+G2 NÃO autoriza automaticamente:
+
+- commit;
+- push;
+- release;
+- deploy;
+- expansão de escopo.
+
+---
+
+# 20. IMPLEMENT
+
+Implementar somente:
+
+`SPEC + PLAN`
+
+Não adicionar melhorias laterais.
+
+Não realizar refatorações oportunistas sem necessidade.
+
+Preservar alterações locais.
+
+---
+
+# 21. VERIFY
+
+> IMPLEMENTATION WITHOUT VERIFICATION IS INCOMPLETE.
+
+Demonstrar:
+
+- comportamento novo funciona;
+- comportamento antigo relevante continua funcionando;
+- invariantes permanecem;
+- segurança permanece;
+- escopo não expandiu;
+- contratos permanecem válidos.
+
+---
+
+# 22. EVIDENCE
+
+> EVIDENCE BEFORE ACCEPTANCE.
+
+Utilizar evidência reproduzível:
+
+- testes;
+- smoke tests;
+- diffs;
+- hashes;
+- inspeções;
+- execução real;
+- before/after.
+
+Não declarar DONE apenas porque o código parece correto.
+
+---
+
+# 23. G4 — HUMAN ACCEPTANCE
+
+Depois de:
+
+`IMPLEMENT → VERIFY → EVIDENCE`
+
+parar:
+
+`STOP_HUMAN — G4 PENDING`
+
+Apresentar:
+
+### Impactos positivos
+
+### Impactos negativos / riscos
+
+### Consequências práticas
+
+HUMAN:
+
+- aprova;
+- rejeita;
+- solicita correção.
+
+Somente aprovação HUMAN fecha a Spec.
+
+---
+
+# 24. G3 — SCOPE/BUDGET EXPANSION
+
+Se implementação exigir algo fora do PLAN:
+
+`STOP_HUMAN — G3`
+
+Informar:
+
+- necessidade;
+- motivo;
+- impacto;
+- risco;
+- alteração de orçamento.
+
+Não expandir silenciosamente.
+
+---
+
+# 25. G5 — PUBLIC CONTRACT INCOMPATIBILITY
+
+Antes de qualquer quebra incompatível de contrato público:
+
+`STOP_HUMAN — G5`
+
+Informar:
+
+- contrato atual;
+- incompatibilidade;
+- alternativas;
+- impacto;
+- risco;
+- eventual migração.
+
+Nenhuma quebra silenciosa.
+
+---
+
+# 26. FAIL-CLOSED
+
+Quando evidência necessária estiver ausente ou conflitante:
+
+`BLOCK`
+
+Nunca completar lacunas por suposição.
+
+`UNKNOWN != APPROVED`
+
+`INFERRED != KNOWN`
+
+`KNOWN != APPROVED`
+
+Confidence não substitui authority.
+
+---
+
+# 27. AUTORIDADES INDEPENDENTES
+
+Relacionamento, cardinalidade e chave/unicidade possuem autoridades independentes.
+
+Uma não promove automaticamente a outra.
+
+---
+
+# 28. NÃO MASCARAR PROBLEMAS
+
+Não utilizar automaticamente para esconder incerteza:
+
+- DISTINCT;
+- GROUP BY artificial;
+- deduplicação;
+- arbitragem;
+- filtros inventados.
+
+Se o grão não puder ser provado:
+
+`BLOCKED`
+
+---
+
+# 29. WORKTREE
+
+Antes de implementar:
+
+inspecionar Git.
+
+Preservar alterações locais.
+
+Não executar destrutivamente sem autorização:
+
+- reset;
+- clean;
+- checkout destrutivo;
+- overwrite;
+- descarte.
+
+---
+
+# 30. COMMIT / PUSH / RELEASE
+
+Gates não implicam autorização Git.
+
+Não inferir autorização para:
+
+- commit;
+- push;
+- merge;
+- release;
+- deploy.
+
+---
+
+# 31. INTERRUPÇÃO
+
+Interrupções podem ocorrer por:
+
+- créditos;
+- tokens;
+- timeout;
+- crash;
+- ambiente;
+- troca de agente;
+- troca de provedor.
+
+Estado:
+
+`INTERRUPTED`
+
+Interrupção não significa falha.
+
+Interrupção não significa conclusão.
+
+Retomada:
+
+`INSPECT`
+↓
+`RECONCILE`
+↓
+`PRESERVE`
+↓
+`CONTINUE`
+
+Nunca:
+
+`INTERRUPTED → RESTART EVERYTHING`
+
+---
+
+# 32. RECOVERY IDEMPOTENTE
+
+Ao assumir trabalho interrompido:
+
+1. inspecionar;
+2. comparar com PLAN;
+3. identificar COMPLETED;
+4. identificar PARTIAL;
+5. identificar NOT STARTED;
+6. identificar BLOCKED;
+7. preservar trabalho válido;
+8. continuar do primeiro ponto incompleto.
+
+---
+
+# PARTE III — HANDOFF UPDATE CONTRACT
+
+# 33. HANDOFF UPDATE RULE
+
+Este documento faz parte da infraestrutura operacional da construção do MCP.
+
+> Todo agente executor com acesso de escrita ao repositório deve manter `PROJECT_HANDOFF_MCP` sincronizado com o estado do desenvolvimento do MCP.
+
+Depois de mudança relevante de estado:
+
+atualizar o handoff antes de encerrar normalmente a execução.
+
+Registrar somente fatos verificados.
+
+---
+
+# 34. O QUE ATUALIZAR
+
+Quando aplicável:
+
+- última ação concluída;
+- Spec ativa;
+- PLAN ativo;
+- Gate;
+- fase;
+- arquivos/áreas alteradas;
+- testes;
+- evidências;
+- riscos;
+- bloqueios;
+- pendências;
+- NEXT ACTION.
+
+---
+
+# 35. QUANDO ATUALIZAR
+
+Atualizar quando houver:
+
+- nova Spec;
+- G1;
+- novo PLAN;
+- G2;
+- início de implementação relevante;
+- marco significativo do PLAN;
+- mudança estrutural;
+- IMPLEMENT concluído;
+- VERIFY;
+- EVIDENCE;
+- G3;
+- G4;
+- G5;
+- STOP_BLOCKED;
+- INTERRUPTED;
+- RECOVERY;
+- fechamento de Spec;
+- mudança de arquitetura;
+- mudança significativa de risco;
+- mudança do NEXT ACTION.
+
+Não atualizar a cada linha de código.
+
+Princípio:
+
+> CHECKPOINT SEMÂNTICO, NÃO LOG DE CADA EDIÇÃO.
+
+---
+
+# 36. EXECUÇÕES LONGAS
+
+Antes de execução longa ou com risco de consumir muitos créditos:
+
+confirmar/atualizar checkpoint.
+
+Registrar:
+
+- autorização vigente;
+- objetivo;
+- estado inicial relevante;
+- invariantes;
+- STOP CONDITIONS.
+
+Durante execução longa:
+
+criar novos checkpoints após marcos significativos quando apropriado.
+
+---
+
+# 37. ANTES DE ENCERRAR UMA SESSÃO
+
+Agente com acesso de escrita deve:
+
+1. reconciliar estado;
+2. atualizar handoff;
+3. registrar último estado verificado;
+4. registrar NEXT ACTION;
+5. não marcar trabalho incompleto como DONE.
+
+---
+
+# 38. INTERRUPÇÃO ANTES DA ATUALIZAÇÃO
+
+Se créditos/sessão terminarem antes da atualização:
+
+o próximo agente deve:
+
+`INSPECT → RECONCILE → PRESERVE`
+
+Depois atualizar este handoff com o estado encontrado.
+
+---
+
+# 39. AGENTE SEM ACESSO DE ESCRITA
+
+Se não possuir acesso de escrita:
+
+não afirmar que atualizou o arquivo.
+
+Deve:
+
+1. produzir o conteúdo necessário;
+2. informar que precisa ser gravado externamente;
+3. registrar apenas fatos comprovados.
+
+---
+
+# 40. RESPONSABILIDADE DO EXECUTOR
+
+Se possui acesso de escrita e houve mudança relevante:
+
+a atualização do handoff faz parte da conclusão operacional da etapa.
+
+O HUMAN não precisa lembrar o agente de atualizar o contexto.
+
+---
+
+# 41. NÃO TRANSFORMAR EM DIÁRIO
+
+Evitar:
+
+- cada comando;
+- cada linha;
+- logs gigantes;
+- duplicação integral das Specs;
+- duplicação integral dos PLANs.
+
+Preferir:
+
+- estado;
+- decisões;
+- evidências;
+- riscos;
+- referências;
+- NEXT ACTION.
+
+---
+
+# 42. REGRA DE VERACIDADE
+
+Somente registrar como concluído o que possui evidência.
+
+Quando necessário:
+
+`UNKNOWN`
+
+`PARTIAL`
+
+`INTERRUPTED`
+
+`NOT VERIFIED`
+
+`BLOCKED`
+
+Nunca transformar incerteza em:
+
+`DONE`
+
+---
+
+# PARTE IV — MCP PRODUCT CONTRACT
+
+# 43. IDENTIDADE
+
+Projeto:
+
+`data-engineering-mcp`
+
+Repositório local:
+
+`<repo-root>`
+
+GitHub:
+
+`paul-92/data-engineering-mcp`
+
+Branch:
+
+`main`
+
+Baseline publicada conhecida:
+
+`862abae4237997bc7165b27a4fc179429ff11359`
+
+Mensagem:
+
+`feat: initial data engineering MCP implementation`
+
+Existem alterações aceitas posteriores ainda locais/uncommitted.
+
+NÃO descartá-las.
+
+---
+
+# 44. OBJETIVO DO MCP
+
+Servidor MCP local/offline para engenharia de dados.
+
+Responsabilidades:
+
+- ler estruturas locais;
+- catalogar tabelas;
+- catalogar colunas;
+- descobrir candidatos a relacionamentos;
+- representar metadata;
+- representar autoridades;
+- representar keys;
+- representar cardinalidade;
+- estruturar query intent;
+- gerar Oracle SQL seguro;
+- explicar SQL.
+
+O MCP NÃO executa SQL no banco.
+
+O MCP NÃO depende obrigatoriamente do Power BI.
+
+---
+
+# 45. ARQUITETURA GENÉRICA
+
+Regra:
+
+> CURRENT TABLES ARE DATA, NOT ARCHITECTURE.
+
+As tabelas HAP atuais não representam o universo final.
+
+Novas tabelas serão adicionadas.
+
+Arquitetura:
+
+`GENERIC`
+
+`DATA-DRIVEN`
+
+`METADATA-DRIVEN`
+
+Não:
+
+`TABLE-SPECIFIC`
+
+Adicionar tabela nova não deve exigir código específico para aquela tabela.
+
+Nenhum hardcode HAP.
+
+---
+
+# 46. STACK
+
+- Python 3.12.10
+- MCP SDK 2.1.1
+- stdio
+- local/offline
+- XLSX read-only
+- Oracle SQL
+- SELECT/WITH
+- parametrizado
+- sem execução no banco
+
+---
+
+# 47. MCP PUBLIC SURFACE
+
+Exatamente 12 tools:
+
+1. `listar_tabelas`
+2. `descrever_tabela`
+3. `buscar_coluna`
+4. `buscar_tabelas`
+5. `inferir_relacionamentos`
+6. `encontrar_caminho`
+7. `atualizar_catalogo`
+8. `status_catalogo`
+9. `gerar_sql`
+10. `gerar_select`
+11. `gerar_join`
+12. `explicar_sql`
+
+Preservar 12 tools salvo contrato futuro aprovado.
+
+---
+
+# PARTE V — HISTÓRICO DO DESENVOLVIMENTO DO MCP
+
+# 48. SPEC-001 — SPEC-DRIVEN ENGINEERING FOUNDATION
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-001:
+
+`COMPLETED`
+
+Estabeleceu a fundação metodológica.
+
+---
+
+# 49. SPEC-002 — METADATA & RELATIONSHIP AUTHORITY
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-002:
+
+`COMPLETED`
+
+Autoridades:
+
+- INFERRED
+- KNOWN
+- APPROVED
+
+APPROVED exige decisão HUMAN.
+
+Persistência:
+
+`metadata/relationships.json`
+
+---
+
+# 50. SPEC-003 — STRUCTURED QUERY PLANNING
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-003:
+
+`COMPLETED`
+
+Introduziu query intent declarativa.
+
+---
+
+# 51. SPEC-004 — SQL VALIDATION & SAFETY GATES
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-004:
+
+`COMPLETED`
+
+Consolidou fail-closed para SQL/JOIN.
+
+---
+
+# 52. SPEC-005 — DATA-ENGINEERING-SPEC-DRIVEN
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-005:
+
+`COMPLETED`
+
+Skill:
+
+`data-engineering-spec-driven/SKILL.md`
+
+Não deve virar segundo ASEP/workflow engine.
+
+---
+
+# 53. SPEC-006 — CONSTRUCTION ORCHESTRATOR
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN separado:
+
+não criado por decisão explícita.
+
+Arquivo:
+
+`AGENTS.md`
+
+Fluxo:
+
+`INSPECT → CLASSIFY → EXECUTE → VERIFY → EVIDENCE`
+
+---
+
+# 54. SPEC-007 — INTEGRATED PRACTICAL MODE VALIDATION
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-007:
+
+`COMPLETED`
+
+Validou:
+
+- SQL only;
+- BI novo;
+- BI existente.
+
+Resultado conhecido:
+
+`48 tests PASS`
+
+`12 tools`
+
+---
+
+# 55. SPEC-008 — LOCAL POWER BI END-TO-END VALIDATION
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-008:
+
+`COMPLETED`
+
+Validou fluxo local até Power BI Desktop.
+
+---
+
+# 56. SPEC-009 — END-TO-END JOIN FAIL-CLOSED
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-009:
+
+`COMPLETED`
+
+Eliminou bypass manual após bloqueio de JOIN.
+
+Resultado:
+
+`53 full-suite tests PASS`
+
+`12 tools`
+
+---
+
+# 57. SPEC-010 — KEY/CARDINALITY & GRAIN AUTHORITY
+
+Estado:
+
+`ACCEPTED / DONE`
+
+PLAN-010:
+
+`COMPLETED`
+
+Adicionou:
+
+- PK;
+- UNIQUE;
+- keys simples;
+- keys compostas;
+- cardinalidade;
+- autoridades independentes;
+- grain opcional;
+- grain preservation fail-closed.
+
+Cardinalidades:
+
+- ONE_TO_ONE
+- MANY_TO_ONE
+- ONE_TO_MANY
+- MANY_TO_MANY
+- UNKNOWN
+
+Resultado:
+
+`45 specific tests PASS`
+
+`73 full-suite tests PASS`
+
+`12 tools`
+
+E2E complementar:
+
+sem autoridade:
+
+`BLOCKED`
+
+fixture sintética autorizada:
+
+`ALLOWED`
+
+com exatamente dois LEFT JOINs.
+
+Nenhuma relação HAP foi homologada.
+
+---
+
+# PARTE VI — METADATA CONTRACT
+
+# 58. KEYS
+
+Modelo persistente suporta:
+
+`keys`
+
+ExplicitKey:
+
+- table
+- columns[]
+- kind
+- source
+- authority
+- decision
+
+Kinds:
+
+`PRIMARY_KEY`
+
+`UNIQUE`
+
+Suporta keys simples e compostas.
+
+---
+
+# 59. RELATIONSHIPS
+
+Antes da SPEC-011:
+
+endpoints persistentes escalares:
+
+`source_column`
+
+`target_column`
+
+Isso limita relacionamento a single-column.
+
+Essa limitação originou SPEC-011.
+
+---
+
+# 60. CARDINALITY
+
+- ONE_TO_ONE
+- MANY_TO_ONE
+- ONE_TO_MANY
+- MANY_TO_MANY
+- UNKNOWN
+
+Cardinalidade possui autoridade independente.
+
+---
+
+# 61. REAL HAP METADATA
+
+Não homologar fatos HAP apenas para testes.
+
+Último hash conhecido:
+
+`E020F99F…78B17`
+
+Confirmar valor real antes de usá-lo como evidência atual.
+
+---
+
+# PARTE VII — SPEC-011
+
+# 62. PROBLEMA
+
+Antes:
+
+`COMPOSITE KEY = SUPPORTED`
+
+mas:
+
+`COMPOSITE RELATIONSHIP = NOT SUPPORTED`
+
+Exemplo:
+
+`A.(ID, VERSION) → B.(ID, VERSION)`
+
+Consequência:
+
+chave composta não podia sustentar completamente grain preservation através de JOIN composto.
+
+---
+
+# 63. SPEC-011 — COMPOSITE RELATIONSHIP SUPPORT
+
+Arquivo:
+
+`specs/SPEC-011-composite-relationship-support.md`
+
+Estado:
+
+`G1 APPROVED`
+
+Estratégia:
+
+- aceitar legado `source_column` / `target_column`;
+- adicionar `source_columns[]` / `target_columns[]` ou equivalente aprovado;
+- normalizar internamente para listas ordenadas;
+- validar mesmo número;
+- correspondência posicional;
+- atualizar identidade;
+- merge;
+- conflitos;
+- caminhos;
+- JOIN;
+- SQL;
+- grain preservation;
+- comparar endpoint composto exatamente com `ExplicitKey.columns`;
+- heurística single-column;
+- 12 tools;
+- nenhum hardcode HAP.
+
+---
+
+# 64. PLAN-011
+
+Arquivo:
+
+`specs/PLAN-011-composite-relationship-support.md`
+
+Estado:
+
+`G2 APPROVED`
+
+Implementação autorizada.
+
+Invariantes:
+
+`legacy single-column → PASS`
+
+`new single-column → equivalent`
+
+`composite → ordered positional pairs`
+
+`composite N:1 + sufficient authority + matching PK/UNIQUE → grain preservation possible`
+
+`partial key → BLOCKED`
+
+`wrong order → BLOCKED`
+
+`insufficient cardinality → BLOCKED`
+
+`insufficient authority → BLOCKED`
+
+`conflict → BLOCKED`
+
+Também:
+
+- exatamente 12 tools;
+- heurística single-column;
+- metadata HAP intacta;
+- nenhuma interface de metadata;
+- nenhum Oracle profiler;
+- nenhum planner;
+- nenhum optimizer;
+- nenhuma deduplicação;
+- nenhum BI;
+- nenhum hardcode HAP.
+
+---
+
+# PARTE VIII — CURRENT MCP DEVELOPMENT STATE
+
+# 65. CURRENT STATE
+
+Checkpoint:
+
+`2026-09-18`
+
+Estado:
+
+`SPEC-001..010 → CLOSED`
+
+`SPEC-011 → CLOSED`
+
+`SPEC-011 G1 → APPROVED`
+
+`PLAN-011 → CREATED`
+
+`PLAN-011 G2 → APPROVED`
+
+`RECOVERY INSPECTION → COMPLETED`
+
+`IMPLEMENT → COMPLETED AFTER RECOVERY`
+
+`VERIFY → COMPLETED`
+
+`EVIDENCE → COMPLETED`
+
+`G4 → APPROVED`
+
+---
+
+# 66. INTERRUPÇÃO
+
+Causa:
+
+`PROVIDER CREDIT LIMIT`
+
+É interrupção operacional.
+
+Não prova falha.
+
+Não prova conclusão.
+
+O worktree pode conter:
+
+- implementação parcial;
+- implementação quase completa;
+- implementação completa não verificada.
+
+Inspecionar antes de concluir.
+
+## 66.1 RECOVERY CHECKPOINT — 2026-09-18
+
+Inspeção read-only reconciliou o checkpoint com o worktree real:
+
+- branch `main`, baseline `862abae4237997bc7165b27a4fc179429ff11359` preservada;
+- alterações locais preexistentes e alterações da SPEC-011 preservadas;
+- alterações já presentes dentro do orçamento: `models.py`, `relationships.py`, `sql_generator.py`, `server.py`, `test_relationships.py`, `test_sql_generator.py` e `README.md`;
+- alterações ainda não presentes: `tests/test_server.py`, registros de execução da SPEC/PLAN-011 e evidência adicional;
+- `metadata/relationships.json` não foi alterado;
+- a implementação contém normalização inicial de endpoints, mas ainda há caminhos escalares em identidade, merge, grão, SQL e mensagens;
+- a suíte não foi validada funcionalmente neste checkpoint: a primeira execução falhou na descoberta do pacote sem `PYTHONPATH=src`;
+- não foi identificado G3, G5 ou `STOP_BLOCKED` técnico.
+
+Classificação do PLAN-011:
+
+- `COMPLETED`: INSPECT/reconciliação inicial;
+- `PARTIAL`: normalização de modelos e alterações iniciais de runtime/testes;
+- `COMPLETED`: conclusão vetorial de relacionamentos, regressão MCP, VERIFY e EVIDENCE;
+- `BLOCKED`: nenhum bloqueio técnico confirmado.
+
+---
+
+# 67. LAST VERIFIED HUMAN DECISION
+
+`G4 — SPEC-011 APPROVED`
+
+`SPEC-011` foi aceita e encerrada pelo HUMAN/Product Owner em 2026-09-18.
+
+---
+
+# 68. NEXT ACTION
+
+`NONE — DEVELOPMENT CLOSED`
+
+SPEC-011 e PLAN-011 estão encerrados. O HUMAN concedeu `HUMAN FINAL PRODUCT ACCEPTANCE → APPROVED`; nenhum commit, push, release ou publicação está implicado por esse aceite.
+
+Classificar itens do PLAN:
+
+`COMPLETED`
+
+`PARTIAL`
+
+`NOT STARTED`
+
+`BLOCKED`
+
+---
+
+# 69. RETOMADA
+
+Após G4 explícito, inspecionar novamente o estado canônico antes de qualquer próxima Spec. Não iniciar implementação sem uma próxima atividade já autorizada.
+
+## 69.1 FINAL MCP READINESS INSPECTION — 2026-09-18
+
+A inspeção read-only comparou o produto com o objetivo da Parte IV, a experiência-alvo das Partes XI/XII e as capacidades aceitas nas SPEC-001..SPEC-011.
+
+Resultado reproduzível:
+
+- `.venv\Scripts\python.exe -m pytest -q`: `82 passed`;
+- `scripts\smoke_test.py`: servidor local iniciado com exatamente `12 tools`;
+- worktree preserva as alterações locais existentes; nenhuma alteração foi feita em runtime, testes, metadata, configuração, remoto ou artefatos de publicação durante esta inspeção;
+- as capacidades entregues cobrem catálogo XLSX local, descoberta, query intent, autoridade, relacionamentos simples/compostos, cardinalidade, keys, grain preservation fail-closed, SQL Oracle parametrizado, explicação SQL, skill desacoplada e validações práticas.
+
+Gaps reais classificados:
+
+### RESIDUAL_RISK
+
+- **Ingestão operacional de metadata:** não existe canal MCP genérico para cadastrar ou homologar PK, UNIQUE, relacionamento, cardinalidade, autoridade e decisão HUMAN. O caminho atual é edição manual de `metadata/relationships.json`; sem metadata suficiente, a descoberta produz `INFERRED`/`UNKNOWN` e JOIN automático permanece bloqueado. Isto é comportamento fail-closed conhecido e não impede o uso local seguro já entregue, mas limita a experiência operacional.
+
+### BACKLOG
+
+- Avaliar futuramente uma capacidade de ingestão/homologação de metadata somente após INSPECT separado demonstrar necessidade concreta, contrato, autoridade, orçamento e critérios. A lacuna não cria automaticamente uma nova Spec nem autoriza implementação.
+
+Não foram identificados outros gaps reais para a finalização do MCP. A ausência de execução em banco, dependência obrigatória de Power BI/Figma, publicação, conexão direta a banco, inferência automática de autoridade e alteração de metadata real permanece dentro do objetivo e do não-escopo aceitos.
+
+**FINAL MCP READINESS:** `READY WITH RESIDUAL RISK`
+
+**ACTIVE SPEC:** `NONE`
+
+**NEXT ACTION:** `NONE — DEVELOPMENT CLOSED`
+
+## 69.2 FINAL PRODUCT ACCEPTANCE AND AUDIT BASELINE — 2026-09-18
+
+Decisão HUMAN registrada:
+
+`HUMAN FINAL PRODUCT ACCEPTANCE → APPROVED`
+
+`DATA ENGINEERING MCP v0.1.0 → OPERATIONAL / DEVELOPMENT CLOSED`
+
+Baseline documental criada:
+
+`DATA_ENGINEERING_MCP_TECHNICAL_FUNCTIONAL_SPECIFICATION.md`
+
+O documento descreve somente capacidades implementadas e evidenciadas, separa `IMPLEMENTED`, `VERIFIED`, `ACCEPTED`, `RESIDUAL_RISK` e `BACKLOG`, e inclui matriz de rastreabilidade com 56 requisitos: 18 funcionais, 16 técnicos, 12 de segurança e 10 não funcionais.
+
+Evidências de fechamento permanecem: `82 tests PASS`, smoke com exatamente `12 tools`, `git diff --check` aprovado e hash de metadata preservado. A ingestão/homologação operacional de metadata continua registrada somente como `RESIDUAL_RISK`; uma eventual interface futura continua somente em `BACKLOG`. Nenhuma SPEC-012 foi criada.
+
+Gap de evidência registrado no documento: `EVIDENCE-007` preserva um fechamento histórico intermediário com `G4 PENDING`, enquanto `SPEC-007`, `PLAN-007` e este handoff registram posteriormente G4 aprovado e encerramento. O fato não altera runtime nem a decisão final HUMAN e não foi corrigido silenciosamente nesta atividade documental.
+
+Estado final do produto:
+
+`FINAL MCP READINESS → READY WITH RESIDUAL RISK`
+
+`ACTIVE SPEC → NONE`
+
+`NEXT ACTION → NONE — DEVELOPMENT CLOSED`
+
+---
+
+# 70. VERIFY MÍNIMO DA SPEC-011
+
+Verificar:
+
+1. legacy simple relationship;
+2. new-format simple relationship;
+3. equivalência;
+4. composite MANY_TO_ONE;
+5. composite grain preservation;
+6. partial key BLOCKED;
+7. wrong order BLOCKED;
+8. missing uniqueness BLOCKED;
+9. missing cardinality BLOCKED;
+10. missing authority BLOCKED;
+11. conflicts BLOCKED;
+12. regressão geral;
+13. exatamente 12 tools;
+14. metadata HAP intacta;
+15. ausência de hardcode;
+16. serialização/persistência compatível;
+17. nenhuma migração manual obrigatória.
+
+---
+
+# 71. STOP CONDITIONS
+
+`G3 → SCOPE/BUDGET EXPANSION`
+
+`G5 → PUBLIC CONTRACT INCOMPATIBILITY`
+
+`STOP_BLOCKED → TECHNICAL BLOCKER`
+
+`G4 → IMPLEMENT + VERIFY + EVIDENCE COMPLETE`
+
+---
+
+# PARTE IX — FUTURE MCP INSPECTS
+
+# 72. METADATA INGESTION GAP
+
+Lacuna futura conhecida:
+
+runtime representa metadata explícita, mas não existe atualmente canal MCP operacional completo e genérico para cadastrar:
+
+- PK;
+- UNIQUE;
+- relationship;
+- cardinality;
+- authority;
+- HUMAN decision.
+
+Nova XLSX sozinha tende a produzir:
+
+`INFERRED / UNKNOWN`
+
+e JOIN automático pode permanecer:
+
+`BLOCKED`
+
+IMPORTANTE:
+
+NÃO pertence à SPEC-011.
+
+Após SPEC-011:
+
+pode passar por INSPECT separado.
+
+Nenhuma nova Spec está automaticamente autorizada.
+
+---
+
+# 73. HEURISTIC QUALITY
+
+Foi observado ruído semântico possível na inferência nominal.
+
+Exemplo:
+
+`EMPRESA_CONVENIADA`
+
+versus candidato:
+
+`CD_CANCELAMENTO`
+
+Princípio:
+
+`MATCHING NAME != SEMANTIC TRUTH`
+
+Heurística permanece:
+
+`INFERRED`
+
+Nunca elevar autoridade apenas por nome.
+
+---
+
+# PARTE X — INTEGRAÇÕES DO MCP
+
+# 74. DATA ENGINEERING MCP
+
+Registro:
+
+`data-engineering-mcp`
+
+Transport:
+
+`stdio`
+
+Executável:
+
+`.venv\Scripts\data-engineering-mcp.exe`
+
+Variável:
+
+`DATA_ENGINEERING_MCP_DATA_DIR`
+
+---
+
+# 75. POWER BI
+
+Power BI MCP está registrado no ambiente conhecido.
+
+Data Engineering MCP continua independente dele.
+
+---
+
+# 76. FIGMA
+
+Figma pode participar de projetos consumidores quando apropriado.
+
+Figma NÃO pertence ao desenvolvimento da SPEC-011.
+
+---
+
+# PARTE XI — TARGET EXPERIENCE DO MCP
+
+# 77. DATA-ENGINEERING-SPEC-DRIVEN
+
+Experiência futura pretendida ao utilizar o MCP:
+
+classificar/inferir pedidos como:
+
+- criar BI novo;
+- melhorar/revisar BI;
+- gerar somente SQL.
+
+Fontes possíveis:
+
+- XLSX;
+- CSV;
+- TXT;
+- representações locais de DB/schema.
+
+Se caminho já foi fornecido:
+
+usar.
+
+Não perguntar novamente.
+
+Princípio:
+
+`INSPECT BEFORE PLAN`
+
+Specs proporcionais.
+
+---
+
+# PARTE XII — CONSUMER PROJECT HANDOFF POLICY
+
+# 78. CRIAÇÃO DE HANDOFF PARA PROJETO CONSUMIDOR
+
+Quando o MCP começar a ser utilizado para construir um projeto concreto, criar um handoff SEPARADO.
+
+Formato:
+
+`PROJECT_HANDOFF_<PROJECT_NAME>.txt`
+
+Esse arquivo deve pertencer ao projeto consumidor, não ao MCP.
+
+---
+
+# 79. CONTEÚDO DO HANDOFF CONSUMIDOR
+
+Deve registrar, conforme aplicável:
+
+- objetivo do projeto;
+- stakeholders;
+- requisitos;
+- fontes;
+- caminhos;
+- tabelas;
+- modelo;
+- grão;
+- SQL;
+- BI;
+- medidas;
+- layout;
+- regras de negócio;
+- Specs;
+- PLANs;
+- HUMAN Gates;
+- decisões;
+- evidências;
+- riscos;
+- bloqueios;
+- CURRENT STATE;
+- NEXT ACTION.
+
+---
+
+# 80. METODOLOGIA NO PROJETO CONSUMIDOR
+
+O projeto consumidor pode reutilizar o mesmo núcleo metodológico:
+
+`REQUEST → INSPECT → CLASSIFY → SPEC → PLAN → IMPLEMENT → VERIFY → EVIDENCE`
+
+com HUMAN Gates.
+
+Entretanto:
+
+as Specs e decisões pertencem ao projeto consumidor.
+
+Não registrar essas Specs como Specs de desenvolvimento do MCP.
+
+---
+
+# 81. REFERÊNCIA AO MCP
+
+O handoff consumidor pode registrar algo como:
+
+`Data Engineering MCP = available project capability`
+
+e sua versão/capacidade quando relevante.
+
+Não precisa copiar todo:
+
+- histórico SPEC-001..;
+- desenvolvimento interno;
+- decisões arquiteturais internas;
+- bugs antigos;
+- PLANs internos do MCP.
+
+---
+
+# 82. ISOLAMENTO
+
+Regra:
+
+`MCP DEVELOPMENT STATE != CONSUMER PROJECT STATE`
+
+e:
+
+`CONSUMER PROJECT A != CONSUMER PROJECT B`
+
+Cada contexto é independente.
+
+---
+
+# PARTE XIII — PROVIDER-NEUTRAL RESUME INSTRUCTIONS
+
+# 83. RESUME PROMPT — MCP DEVELOPMENT
+
+Você está assumindo a continuidade da construção do produto `data-engineering-mcp`.
+
+Este handoff pertence EXCLUSIVAMENTE ao desenvolvimento e à finalização do próprio MCP.
+
+Não confunda este contexto com projetos que utilizam o MCP.
+
+Leia integralmente este PROJECT_HANDOFF_MCP antes de executar qualquer ação.
+
+Respeite:
+
+1. METHODOLOGY CONTRACT;
+2. HANDOFF UPDATE CONTRACT;
+3. MCP PRODUCT CONTRACT;
+4. CURRENT MCP DEVELOPMENT STATE;
+5. STOP CONDITIONS.
+
+Princípio:
+
+`HUMAN É AUTORIDADE, NÃO ORQUESTRADOR.`
+
+Reconcilie este documento com o repositório.
+
+Preserve alterações locais.
+
+Não execute reset destrutivo.
+
+Não reinicie trabalho concluído.
+
+Não expanda escopo.
+
+Não crie Specs opcionais.
+
+Não faça commit, push ou release sem autorização.
+
+Estado conhecido:
+
+`SPEC-011 → ACTIVE`
+
+`G1 → APPROVED`
+
+`PLAN-011 → G2 APPROVED`
+
+`IMPLEMENT → INTERRUPTED`
+
+`G4 → NOT REACHED`
+
+Primeira atividade:
+
+`RECOVERY INSPECTION — READ ONLY`
+
+Determine:
+
+1. arquivos alterados;
+2. estado Git;
+3. itens concluídos;
+4. itens parciais;
+5. itens não iniciados;
+6. testes executados;
+7. testes pendentes;
+8. eventual expansão;
+9. eventual incompatibilidade pública;
+10. eventual bloqueio.
+
+Produza:
+
+`RECOVERY CHECKPOINT`
+
+Se não houver:
+
+`G3`
+
+`G5`
+
+ou:
+
+`STOP_BLOCKED`
+
+não peça nova autorização.
+
+G2 permanece aprovado.
+
+Continue:
+
+`IMPLEMENT → VERIFY → EVIDENCE`
+
+Depois:
+
+`STOP_HUMAN — G4 PENDING`
+
+Não aprove G4.
+
+Se possuir acesso de escrita:
+
+atualize este `PROJECT_HANDOFF_MCP` após mudanças relevantes.
+
+---
+
+# PARTE XIV — QUICK RECOVERY
+
+# 84. RESUMO
+
+Produto:
+
+`data-engineering-mcp`
+
+Este handoff:
+
+`MCP DEVELOPMENT ONLY`
+
+Metodologia:
+
+`SPEC-DRIVEN + HUMAN GATES`
+
+Princípio:
+
+`HUMAN É AUTORIDADE, NÃO ORQUESTRADOR`
+
+Última Spec fechada:
+
+`SPEC-010`
+
+Spec ativa:
+
+`SPEC-011 — COMPOSITE RELATIONSHIP SUPPORT`
+
+G1:
+
+`APPROVED`
+
+PLAN-011:
+
+`G2 APPROVED`
+
+Implementação:
+
+`INTERRUPTED BY CREDIT LIMIT`
+
+Próxima ação:
+
+`READ-ONLY RECOVERY`
+
+Depois:
+
+`CONTINUE IMPLEMENTATION`
+
+Final esperado:
+
+`VERIFY → EVIDENCE → G4`
+
+---
+
+# PARTE XV — CURRENT CHECKPOINT
+
+# 85. CHECKPOINT ID
+
+`DE-MCP-HANDOFF-2026-09-18-SPEC011-G4-PENDING`
+
+---
+
+# 86. ACTIVE PRODUCT
+
+`DATA ENGINEERING MCP`
+
+---
+
+# 87. ACTIVE SPEC
+
+`NONE — SPEC-011 CLOSED`
+
+---
+
+# 88. LAST HUMAN DECISION
+
+`G4 APPROVED`
+
+---
+
+# 89. EXECUTION STATE
+
+`IMPLEMENT + VERIFY + EVIDENCE COMPLETED`
+
+---
+
+# 90. LAST VERIFIED COMPLETED ACTION
+
+`PLAN-011 executado, verificado e evidenciado após recovery.`
+
+Resultado reproduzível: `82 passed`, smoke com `12 tools`, metadata real preservado e diff dentro do orçamento autorizado.
+
+---
+
+# 91. NEXT SAFE ACTION
+
+`INSPECT NEXT AUTHORIZED WORK`
+
+---
+
+# 92. EXPECTED NEXT HUMAN GATE
+
+Nenhum gate de implementação está aberto. Qualquer próximo trabalho exige INSPECT e autorização própria.
+
+---
+
+# 93. HANDOFF STATUS
+
+`ACTIVE / MCP DEVELOPMENT CANONICAL PORTABLE CONTEXT`
+
+Próxima atualização obrigatória: após INSPECT e decisão explícita sobre eventual próximo trabalho.
+
+O próximo agente com acesso de escrita deve atualizar principalmente:
+
+- CURRENT STATE;
+- EXECUTION STATE;
+- LAST VERIFIED COMPLETED ACTION;
+- VERIFY;
+- EVIDENCE;
+- riscos;
+- bloqueios;
+- NEXT SAFE ACTION;
+- CHECKPOINT ID.
+
+---
+
+# 94. FINAL SCOPE REMINDER
+
+Este documento termina na fronteira:
+
+> DESENVOLVIMENTO / EVOLUÇÃO / FINALIZAÇÃO DO DATA ENGINEERING MCP.
+
+Quando o MCP for utilizado para criar outro produto:
+
+NÃO transformar este arquivo no handoff daquele produto.
+
+Criar:
+
+`PROJECT_HANDOFF_<PROJECT_NAME>.txt`
+
+O MCP continua com seu contexto.
+
+O novo projeto começa com contexto próprio.
+
+---
+
+# END OF PROJECT_HANDOFF_MCP V4

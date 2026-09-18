@@ -5,7 +5,7 @@ from typing import Any
 
 from .catalog import Catalog
 from .exceptions import AmbiguousColumnError, ColumnNotFoundError, InvalidFilterError, RelationshipNotFoundError
-from .models import Confidence, FilterCondition, RelationshipCandidate, SqlGenerationRequest, SqlGenerationResult
+from .models import Confidence, FilterCondition, RelationshipAuthority, RelationshipCandidate, SqlGenerationRequest, SqlGenerationResult
 from .relationships import RelationshipEngine
 
 SAFE_NAME = re.compile(r"^[A-Z][A-Z0-9_$#]*$")
@@ -22,7 +22,13 @@ class SQLGenerator:
         aliases = self._aliases(tables)
         selected = request.columns or [f"{t}.{c.name}" for t in tables for c in self.catalog.get_table(t).columns]
         resolved = [self._resolve_column(c, tables) for c in selected]
-        joins, used, warnings = self._joins(tables, request.allow_low_confidence)
+        if request.grain is not None:
+            grain = [self._resolve_column(column, tables) for column in request.grain]
+            if any(table != tables[0] for table, _ in grain):
+                raise RelationshipNotFoundError(
+                    f"Grão declarado deve pertencer à tabela base {tables[0]} nesta validação mínima"
+                )
+        joins, used, warnings = self._joins(tables, request.allow_low_confidence, request.grain is not None)
         select_lines = [f"    {aliases[t]}.{c}" for t, c in resolved]
         sql = "SELECT\n" + ",\n".join(select_lines) + f"\nFROM {tables[0]} {aliases[tables[0]]}"
         connected = {tables[0]}
@@ -31,7 +37,15 @@ class SQLGenerator:
                 old, new = rel.source_table, rel.target_table
             else:
                 old, new = rel.target_table, rel.source_table
-            sql += f"\nLEFT JOIN {new} {aliases[new]}\n    ON {aliases[new]}.{rel.target_column if new == rel.target_table else rel.source_column} = {aliases[old]}.{rel.source_column if old == rel.source_table else rel.target_column}"
+            if new == rel.target_table:
+                new_columns, old_columns = rel.target_columns or [], rel.source_columns or []
+            else:
+                new_columns, old_columns = rel.source_columns or [], rel.target_columns or []
+            predicates = [
+                f"{aliases[new]}.{new_column} = {aliases[old]}.{old_column}"
+                for new_column, old_column in zip(new_columns, old_columns)
+            ]
+            sql += f"\nLEFT JOIN {new} {aliases[new]}\n    ON " + "\n    AND ".join(predicates)
             connected.add(new)
         params: dict[str, Any] = {}
         clauses = []
@@ -84,18 +98,51 @@ class SQLGenerator:
             result[table] = base if counts[base] == 1 else f"{base}{counts[base]}"
         return result
 
-    def _joins(self, tables: list[str], allow_low: bool) -> tuple[list[RelationshipCandidate], list[RelationshipCandidate], list[str]]:
+    def _joins(self, tables: list[str], allow_low: bool, require_grain: bool = False) -> tuple[list[RelationshipCandidate], list[RelationshipCandidate], list[str]]:
         if len(tables) == 1: return [], [], []
         connected, pending, joins, warnings = {tables[0]}, set(tables[1:]), [], []
         while pending:
             choices = [r for r in self.relationships.candidates if (r.source_table in connected and r.target_table in pending) or (r.target_table in connected and r.source_table in pending)]
-            acceptable = [r for r in choices if r.confidence != Confidence.LOW or allow_low]
-            if not acceptable: raise RelationshipNotFoundError(f"Não há relacionamento aceitável para conectar: {', '.join(sorted(pending))}")
-            rel = max(acceptable, key=lambda r: r.score); joins.append(rel)
+            if not choices: raise RelationshipNotFoundError(f"Não há relacionamento aceitável para conectar: {', '.join(sorted(pending))}")
+            rel = max(choices, key=lambda r: r.score)
+            self._require_approved_relationship(rel)
+            if rel.confidence == Confidence.LOW and not allow_low:
+                raise RelationshipNotFoundError(f"Não há relacionamento aceitável para conectar: {', '.join(sorted(pending))}")
+            joins.append(rel)
             new = rel.target_table if rel.source_table in connected else rel.source_table
+            old = rel.source_table if rel.source_table in connected else rel.target_table
+            if require_grain:
+                proof = self.relationships.grain_preservation(rel, old)
+                if not proof["preserves_grain"]:
+                    raise RelationshipNotFoundError(
+                        f"Preservação de grão bloqueada em {old} → {new}: "
+                        f"{'; '.join(proof['reasons'])}. Requer cardinalidade N:1/1:1 autorizada "
+                        "e chave PRIMARY_KEY/UNIQUE correspondente no lado alcançado; "
+                        "nenhuma deduplicação automática será aplicada."
+                    )
             connected.add(new); pending.remove(new)
-            if rel.confidence != Confidence.HIGH: warnings.append(f"JOIN usa relacionamento candidato {rel.confidence}: {rel.source_table}.{rel.source_column} ↔ {rel.target_table}.{rel.target_column}")
+            if rel.confidence != Confidence.HIGH:
+                warnings.append(
+                    f"JOIN usa relacionamento candidato {rel.confidence}: "
+                    f"{rel.source_table}.{','.join(rel.source_columns or [])} ↔ "
+                    f"{rel.target_table}.{','.join(rel.target_columns or [])}"
+                )
         return joins, joins, warnings
+
+    @staticmethod
+    def _require_approved_relationship(rel: RelationshipCandidate) -> None:
+        endpoints = f"{rel.source_table}.{rel.source_column} ↔ {rel.target_table}.{rel.target_column}"
+        reasons = []
+        if rel.authority != RelationshipAuthority.APPROVED:
+            authority = rel.authority.value if rel.authority is not None else "AUSENTE"
+            reasons.append(f"autoridade {authority}")
+        if rel.conflicts:
+            reasons.append(f"conflito(s): {'; '.join(rel.conflicts)}")
+        if reasons:
+            raise RelationshipNotFoundError(
+                f"Relacionamento bloqueado {endpoints}: {', '.join(reasons)}. "
+                "A relação precisa de homologação como APPROVED e estar livre de conflitos."
+            )
 
     def generate_select(self, table: str, columns: list[str] | None = None) -> SqlGenerationResult:
         return self.generate(SqlGenerationRequest(tables=[table], columns=columns))

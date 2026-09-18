@@ -1,0 +1,4 @@
+/// SPEC-008 controlled local end-to-end validation model
+database SPEC008_E2E
+	compatibilityLevel: 1702
+	language: 1046

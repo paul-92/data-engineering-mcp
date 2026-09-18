@@ -1,0 +1,74 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
+  "name": "00000000000000000008",
+  "position": {
+    "x": 80,
+    "y": 80,
+    "z": 1000,
+    "height": 520,
+    "width": 1120,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "RAW_HAP_TB_PRECO_PLANO"
+                    }
+                  },
+                  "Property": "CD_TABELA"
+                }
+              },
+              "queryRef": "RAW_HAP_TB_PRECO_PLANO.CD_TABELA",
+              "nativeQueryRef": "CD_TABELA"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "RAW_HAP_TB_PRECO_PLANO"
+                    }
+                  },
+                  "Property": "DS_TABELA"
+                }
+              },
+              "queryRef": "RAW_HAP_TB_PRECO_PLANO.DS_TABELA",
+              "nativeQueryRef": "DS_TABELA"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "columnHeaders": [
+        {
+          "properties": {
+            "autoSizeColumnWidth": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "columnAdjustment": {
+              "expr": {
+                "Literal": {
+                  "Value": "'growToFit'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
