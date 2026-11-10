@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from .catalog import Catalog
+from .column_knowledge import ColumnKnowledge
 from .exceptions import DataEngineeringMCPError
 from .models import FilterCondition, RelationshipAuthority, SqlGenerationRequest
 from .relationships import RelationshipEngine
@@ -19,29 +21,43 @@ logging.basicConfig(stream=sys.stderr, level=os.getenv("LOG_LEVEL", "INFO"), for
 logger = logging.getLogger(__name__)
 DATA_DIR = Path(os.getenv("DATA_ENGINEERING_MCP_DATA_DIR", Path.cwd() / "data"))
 RELATIONSHIPS_METADATA = Path(os.getenv("DATA_ENGINEERING_MCP_RELATIONSHIPS_FILE", Path.cwd() / "metadata" / "relationships.json"))
+COLUMN_DICTIONARY = Path(os.getenv("DATA_ENGINEERING_MCP_COLUMN_DICTIONARY_FILE", DATA_DIR / ".mcp_column_dictionary.json"))
+COLUMN_PROFILES = Path(os.getenv("DATA_ENGINEERING_MCP_COLUMN_PROFILES_FILE", DATA_DIR / ".mcp_column_profiles.json"))
 catalog = Catalog(DATA_DIR)
 relationships = RelationshipEngine(catalog, RELATIONSHIPS_METADATA)
 catalog.load(); relationships.infer()
 generator = SQLGenerator(catalog, relationships)
+column_knowledge = ColumnKnowledge(catalog, COLUMN_DICTIONARY, COLUMN_PROFILES)
 
-mcp = MCPServer(name="data-engineering-mcp", version="0.1.0",
-    instructions="Catálogo local de XLSX e geração segura de SQL Oracle SELECT. Não acessa bancos nem executa SQL.")
+mcp = MCPServer(name="data-engineering-mcp", version="0.2.0",
+    instructions=(
+        "Atenda pedidos de engenharia de dados em linguagem natural, preferencialmente em português. "
+        "Use o catálogo e o dicionário para resolver tabelas, colunas e sinônimos antes de gerar SQL. "
+        "Consulte perfis locais quando eles ajudarem a esclarecer o significado de uma coluna. "
+        "Se faltar uma decisão que possa alterar o resultado, pergunte ao usuário em vez de adivinhar. "
+        "Use gerar_sql somente com tabelas, colunas, filtros e grão identificados. "
+        "Para otimizar SQL colado ou gerado, explique a consulta, consulte revisar_sql e proponha uma versão "
+        "com alterações justificadas, preservando filtros, agregações e grão. Não afirme ganho de desempenho "
+        "comprovado: o SQL nunca é executado e o MCP não acessa Oracle. "
+        "Nunca chame perfil_colunas com incluir_amostras=true sem autorização explícita do usuário. "
+        "Só registre uma definição por ensinar_coluna quando o usuário a fornecer ou confirmar."
+    ))
 
-
-@mcp.tool(description="Lista deterministicamente as tabelas lógicas do catálogo local.")
+@mcp.tool(description="Lista as tabelas lógicas locais; use para descobrir fontes disponíveis para um pedido em linguagem natural.")
 def listar_tabelas() -> list[str]: return catalog.list_tables()
 
 
-@mcp.tool(description="Descreve arquivo, aba, cabeçalhos e chaves explícitas de uma tabela.")
+@mcp.tool(description="Mostra cabeçalhos, chaves e significados confirmados; descrições ausentes aparecem como desconhecidas.")
 def descrever_tabela(tabela: str) -> dict:
     table = catalog.get_table(tabela)
     return table.model_dump() | {
         "column_count": table.column_count,
         "keys": [key.model_dump(mode="json") for key in relationships.keys_for_table(table.name)],
+        "column_knowledge": column_knowledge.definitions_for_table(table.name),
     }
 
 
-@mcp.tool(description="Busca uma coluna exata, sem diferenciar maiúsculas/minúsculas.")
+@mcp.tool(description="Busca uma coluna exata no catálogo, sem diferenciar maiúsculas/minúsculas.")
 def buscar_coluna(coluna: str) -> list[str]: return catalog.find_column(coluna)
 
 
@@ -49,15 +65,63 @@ def buscar_coluna(coluna: str) -> list[str]: return catalog.find_column(coluna)
 def buscar_tabelas(termo: str) -> list[str]: return catalog.search_tables(termo)
 
 
+@mcp.tool(description="Retorna os significados confirmados e um perfil agregado local da coluna. Não inclui valores de exemplo.")
+def entender_coluna(tabela: str, coluna: str) -> dict:
+    table = catalog.get_table(tabela)
+    name = coluna.strip().upper()
+    if name not in {item.name for item in table.columns}:
+        raise ToolError(f"Coluna inexistente em {table.name}: {coluna}")
+    return {
+        "table": table.name,
+        "column": name,
+        "knowledge": column_knowledge.definition(table.name, name),
+        "profile": column_knowledge.profile(table.name, name, include_samples=False),
+    }
+
+
+@mcp.tool(description="Calcula ou consulta perfis agregados locais. Só use incluir_amostras=true após autorização explícita do usuário; exemplos não são persistidos.")
+def perfil_colunas(tabela: str, colunas: list[str] | None = None, incluir_amostras: bool = False) -> dict:
+    table = catalog.get_table(tabela)
+    selected = [column.strip().upper() for column in colunas] if colunas else [item.name for item in table.columns]
+    profiles = {}
+    for column in selected:
+        try:
+            result = column_knowledge.profile(table.name, column, include_samples=incluir_amostras)
+        except ValueError as exc:
+            raise ToolError(str(exc)) from exc
+        profiles.update(result["columns"])
+    return {
+        "table": table.name,
+        "row_count": result["row_count"] if selected else 0,
+        "columns": profiles,
+        "raw_values_included": bool(incluir_amostras),
+        "notice": "Perfis são calculados nos XLSX locais; valores de exemplo só aparecem com autorização explícita.",
+    }
+
+
+@mcp.tool(description="Ensina ou corrige uma definição confirmada de coluna. Chame somente com definição fornecida ou confirmada pelo usuário.")
+def ensinar_coluna(tabela: str, coluna: str, definicao: str, sinonimos: list[str] | None = None) -> dict:
+    try:
+        return {
+            "table": catalog.get_table(tabela).name,
+            "column": coluna.strip().upper(),
+            "knowledge": column_knowledge.teach(tabela, coluna, definicao, sinonimos),
+        }
+    except DataEngineeringMCPError as exc:
+        raise ToolError(str(exc)) from exc
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+
+
 @mcp.tool(description="Retorna relacionamentos candidatos com autoridade, fonte, decisão e conflitos.")
 def inferir_relacionamentos() -> list[dict]: return [r.model_dump(mode="json") for r in relationships.candidates]
 
 
-@mcp.tool(description="Encontra os melhores caminhos de relacionamentos candidatos com confiança MEDIUM ou HIGH.")
+@mcp.tool(description="Encontra caminhos candidatos entre duas tabelas; caminhos não aprovados não autorizam JOIN.")
 def encontrar_caminho(tabela_origem: str, tabela_destino: str) -> list[dict]: return [p.model_dump(mode="json") for p in relationships.find_paths(tabela_origem, tabela_destino)]
 
 
-@mcp.tool(description="Revarre XLSX, detecta mudanças de schema e recalcula relacionamentos.")
+@mcp.tool(description="Revarre XLSX, detecta mudanças de schema e recalcula relacionamentos. Perfis são atualizados sob demanda quando a tabela é consultada.")
 def atualizar_catalogo() -> dict:
     old = {(r.source_table, tuple(r.source_columns or []), r.target_table, tuple(r.target_columns or [])) for r in relationships.candidates}
     change = catalog.load(); relationships.infer()
@@ -70,7 +134,7 @@ def atualizar_catalogo() -> dict:
 def status_catalogo() -> dict: return catalog.status(len(relationships.candidates)).model_dump(mode="json")
 
 
-@mcp.tool(description="Gera SELECT Oracle estrutural, parametrizado e sem executar SQL.")
+@mcp.tool(description="Gera SELECT Oracle parametrizado a partir de uma intenção estruturada; não executa SQL.")
 def gerar_sql(tabelas: list[str], colunas: list[str] | None = None, filtros: list[FilterCondition] | None = None, permitir_baixa_confianca: bool = False, grain: list[str] | None = None) -> dict:
     try:
         return generator.generate(SqlGenerationRequest(tables=tabelas, columns=colunas, filters=filtros, allow_low_confidence=permitir_baixa_confianca, grain=grain)).model_dump(mode="json")
@@ -117,6 +181,32 @@ def gerar_join(tabela_origem: str, tabela_destino: str) -> dict:
 
 @mcp.tool(description="Explica conservadoramente uma consulta SELECT/WITH sem executá-la.")
 def explicar_sql(sql: str) -> dict: return explain_sql_text(sql)
+
+
+@mcp.tool(description="Analisa SELECT/WITH com verificações estáticas conservadoras; não reescreve nem comprova desempenho.")
+def revisar_sql(sql: str) -> dict:
+    analysis = explain_sql_text(sql)
+    findings = []
+    clean = re.sub(r"--.*?$|/\*.*?\*/", " ", sql, flags=re.M | re.S)
+    if re.search(r"\bSELECT\s+(?:DISTINCT\s+)?\*", clean, re.I):
+        findings.append({
+            "code": "SELECT_STAR",
+            "severity": "REVIEW",
+            "message": "Considere selecionar somente as colunas necessárias; isso melhora clareza e pode reduzir dados lidos.",
+        })
+    if re.search(r"\bLIKE\s+(['\"])%", clean, re.I):
+        findings.append({
+            "code": "LEADING_WILDCARD",
+            "severity": "REVIEW",
+            "message": "O padrão LIKE começa com curinga; isso pode limitar o uso de índices, mas depende do plano e dos índices no Oracle.",
+        })
+    return {
+        "analysis": analysis,
+        "findings": findings,
+        "rewrite_performed": False,
+        "performance_verified": False,
+        "notice": "Verificação estática sem acesso ao banco; valide qualquer reescrita antes de utilizá-la.",
+    }
 
 
 def main() -> None:
