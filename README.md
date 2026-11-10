@@ -1,6 +1,6 @@
 # data-engineering-mcp
 
-Servidor MCP genérico, local e offline que transforma cabeçalhos de arquivos XLSX em um catálogo consultável, infere **relacionamentos candidatos** e gera somente SQL Oracle `SELECT/WITH`. Não acessa bancos de dados, não executa SQL e não possui integração ou dependência de Power BI.
+Servidor MCP local que transforma cabeçalhos de XLSX em catálogo consultável, infere **relacionamentos candidatos**, mantém definições confirmadas de colunas e gera SQL Oracle `SELECT/WITH`. O modelo de linguagem do cliente MCP interpreta pedidos em linguagem natural; o servidor valida e executa apenas operações locais sobre arquivos, sem acessar bancos nem executar SQL.
 
 ## Requisitos e instalação
 
@@ -13,11 +13,11 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Dependências de runtime: `mcp`, `pandas`, `openpyxl` e `pydantic`; testes usam `pytest`. O catálogo usa `openpyxl` diretamente para abrir os workbooks em modo read-only e ler somente a primeira linha necessária.
+Dependências de runtime: `mcp`, `pandas`, `openpyxl` e `pydantic`; testes usam `pytest`. O catálogo lê os cabeçalhos em modo read-only. O perfil de colunas lê as linhas localmente somente quando solicitado e não grava valores brutos.
 
 ## Dados e arquitetura
 
-Os datasets são fornecidos localmente pelo usuário e não fazem parte do repositório. Coloque arquivos `.xlsx` em `data/`; eles permanecem disponíveis ao MCP, mas são ignorados pelo Git. Cada arquivo é uma tabela. O nome lógico remove `.xlsx`, o prefixo `rawzn.` e o sufixo `_SINTETICO`, com comparação case-insensitive. A primeira aba não chamada `SQL` que tenha cabeçalhos é usada; registros não participam da descoberta.
+Os datasets são fornecidos localmente pelo usuário e não fazem parte do repositório. Coloque arquivos `.xlsx` em `data/`; eles permanecem disponíveis ao MCP, mas são ignorados pelo Git. Cada arquivo é uma tabela. O nome lógico remove `.xlsx`, o prefixo `rawzn.` e o sufixo `_SINTETICO`, com comparação case-insensitive. A primeira aba não chamada `SQL` que tenha cabeçalhos é usada. Registros não participam da descoberta do schema; podem ser lidos localmente sob demanda para produzir perfis agregados.
 
 ```text
 data/*.xlsx -> Catalog -> RelationshipEngine <- metadata/relationships.json
@@ -46,7 +46,7 @@ O transporte padrão é stdio. Logs vão para stderr para não corromper o proto
 - `listar_tabelas`, `descrever_tabela`, `buscar_coluna`, `buscar_tabelas`
 - `inferir_relacionamentos`, `encontrar_caminho`, `gerar_join`
 - `atualizar_catalogo`, `status_catalogo`
-- `gerar_sql`, `gerar_select`, `explicar_sql`
+- `gerar_sql`, `gerar_select`, `explicar_sql`, `revisar_sql`\n- `entender_coluna`, `perfil_colunas`, `ensinar_coluna`
 
 `gerar_sql` recebe `tabelas`, `colunas`, filtros tipados `{table?, column, operator, value}` e `grain` opcional. Operadores: `=`, `<>`, `>`, `>=`, `<`, `<=`, `IN`, `IS NULL`, `IS NOT NULL`, `LIKE`. Valores viram bind variables (`:p1`), nunca texto concatenado. Colunas ambíguas exigem `TABELA.COLUNA`. O JOIN padrão é `LEFT JOIN`, escolha conservadora para preservar linhas da primeira tabela. Consultas multi-tabela só geram JOIN com relacionamento `APPROVED`, livre de conflitos e aceito também pelo controle de confiança; `permitir_baixa_confianca` não contorna autoridade ou conflitos. Relações `INFERRED`, `KNOWN`, sem autoridade ou conflitantes falham com os endpoints e a homologação necessária, sem escolha silenciosa de alternativa. Consultas de uma tabela permanecem inalteradas.
 
@@ -123,7 +123,7 @@ Para preservar o grão, todos os pares precisam corresponder exatamente, na mesm
 
 Cardinalidade é orientada de `source_table` para `target_table` e aceita `ONE_TO_ONE`, `MANY_TO_ONE`, `ONE_TO_MANY`, `MANY_TO_MANY` ou `UNKNOWN`. Autoridade de relacionamento, cardinalidade e chave são independentes: nenhuma promove outra. `KNOWN` exige fonte explícita; `APPROVED` exige decisão HUMAN completa. Cardinalidade ausente é `UNKNOWN`, nunca inferida por nome, posição ou score. Chaves podem ser simples ou compostas e aceitam somente `PRIMARY_KEY` ou `UNIQUE`.
 
-Arquivo ausente equivale a nenhum metadado explícito. O documento legado `{"relationships": []}` continua válido. JSON inválido, campos extras, endpoints ou colunas inexistentes, chave vazia, fontes vazias ou `APPROVED` sem decisão humana completa interrompem a carga com erro claro. Conflitos ficam visíveis e bloqueiam a prova de preservação. O score de confiança continua independente: começa em 20 por nome idêntico; soma 30 para prefixos `CD_`, `ID_` ou `NU_`; soma 20 quando a entidade aparece no nome de uma tabela e mais 10 se aparece em ambas. `HIGH >= 75`, `MEDIUM >= 50`, `LOW < 50`. Não há leitura de valores, importação de DDL, acesso a banco ou cálculo empírico de cardinalidade.
+Arquivo ausente equivale a nenhum metadado explícito. O documento legado `{"relationships": []}` continua válido. JSON inválido, campos extras, endpoints ou colunas inexistentes, chave vazia, fontes vazias ou `APPROVED` sem decisão humana completa interrompem a carga com erro claro. Conflitos ficam visíveis e bloqueiam a prova de preservação. O score de confiança continua independente: começa em 20 por nome idêntico; soma 30 para prefixos `CD_`, `ID_` ou `NU_`; soma 20 quando a entidade aparece no nome de uma tabela e mais 10 se aparece em ambas. `HIGH >= 75`, `MEDIUM >= 50`, `LOW < 50`. Perfis de valores são independentes dos relacionamentos: não há importação de DDL, acesso a banco ou cálculo empírico de cardinalidade.
 
 ## Segurança e limitações
 
@@ -140,3 +140,19 @@ Limitações conhecidas:
 - alguns logs com acentos podem ter exibição cosmética incorreta no console Windows configurado como CP1252.
 
 Os XLSX são sempre tratados como read-only. Datasets locais (`data/*`, `*.xlsx`, `*.xls`, `*.csv` e `*.parquet`) são ignorados e não fazem parte do repositório.
+
+
+## Linguagem natural, dicionário e perfis de colunas
+
+O cliente MCP (por exemplo, ChatGPT ou Codex) interpreta o pedido em linguagem natural e usa as ferramentas para consultar o schema, os significados e os relacionamentos aprovados. O servidor não contém um modelo de linguagem. Se faltar uma decisão que possa mudar o resultado, o cliente deve perguntar antes de chamar `gerar_sql`.
+
+- `entender_coluna`: retorna definição confirmada e perfil agregado local da coluna.
+- `perfil_colunas`: calcula, em modo read-only, total de linhas com conteúdo, valores vazios e distribuição de tipos. O perfil não persiste exemplos de valores.
+- `ensinar_coluna`: registra uma definição e sinônimos fornecidos ou confirmados pelo usuário.
+- `revisar_sql`: analisa `SELECT/WITH` e emite alertas estáticos conservadores, sem reescrever nem executar a consulta.
+
+Por padrão, exemplos brutos não são retornados. `perfil_colunas` aceita `incluir_amostras=true), mas o cliente só deve usar essa opção depois de autorização explícita do usuário. Até cinco valores distintos por coluna podem ser retornados nessa chamada; eles não são persistidos pelo MCP. Os valores retornados passam a fazer parte da resposta da ferramenta e podem ser enviados ao modelo pelo cliente.
+
+O dicionário é salvo em `data/.mcp_column_dictionary.json`; perfis agregados ficam em `data/.mcp_column_profiles.json). Ambos são ignorados pelo Git junto com os dados locais. Use `DATA_ENGINEERING_MCP_COLUMN_DICTIONARY_FILE` e `DATA_ENGINEERING_MCP_COLUMN_PROFILES_FILE` para alterar os caminhos. Perfis são armazenados por fingerprint do arquivo e recalculados após mudança de tamanho, data de modificação ou schema, quando a ferramenta de perfil for chamada.
+
+`revisar_sql` pode apontar, por exemplo, uso de `SELECT *` e padrão `LIKE` iniciado por curinga. Isso não confirma que a consulta é semanticamente equivalente nem que terá desempenho melhor. O cliente pode propor uma reescrita em linguagem natural; deve explicar as mudanças e preservar filtros, agregações e grão. A validação final do plano e do desempenho depende do Oracle, que este MCP não acessa.
