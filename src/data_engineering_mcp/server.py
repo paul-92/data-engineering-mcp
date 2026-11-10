@@ -53,7 +53,7 @@ def descrever_tabela(tabela: str) -> dict:
     return table.model_dump() | {
         "column_count": table.column_count,
         "keys": [key.model_dump(mode="json") for key in relationships.keys_for_table(table.name)],
-        "column_knowledge": column_knowledge.definitions_for_table(table.name),
+        "column_knowledge": {item.name: column_knowledge.definition(table.name, item.name) for item in table.columns},
     }
 
 
