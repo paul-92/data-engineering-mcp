@@ -115,7 +115,7 @@ async def test_single_table_and_exact_tool_count_are_preserved(stack, monkeypatc
             "colunas": ["NM_PESSOA_RAZAO_SOCIAL"],
         })
 
-    assert len(tools.tools) == 12
+    assert len(tools.tools) == 16
     assert result.is_error is False
     text = " ".join(block.text for block in result.content if hasattr(block, "text"))
     assert "SELECT" in text
