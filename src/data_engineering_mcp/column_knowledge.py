@@ -114,7 +114,8 @@ class ColumnKnowledge:
 
     def profile(self, table_name: str, column_name: str | None = None, include_samples: bool = False) -> dict[str, Any]:
         table = self.catalog.get_table(table_name)
-        all_columns = {column.name for column in table.columns}\n        selected = set(all_columns)
+        all_columns = {column.name for column in table.columns}
+        selected = set(all_columns)
         if column_name is not None:
             column_name = column_name.strip().upper()
             if column_name not in selected:
@@ -206,7 +207,7 @@ class ColumnKnowledge:
             "source_file": table.source_file,
             "worksheet": table.worksheet,
             "row_count": row_count,
-            "columns": columns,
+            "columns": {name: columns[name] for name in sorted(selected)},
             "cached": False,
             "raw_values_included": bool(include_samples),
         }
