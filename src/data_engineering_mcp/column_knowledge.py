@@ -114,7 +114,7 @@ class ColumnKnowledge:
 
     def profile(self, table_name: str, column_name: str | None = None, include_samples: bool = False) -> dict[str, Any]:
         table = self.catalog.get_table(table_name)
-        selected = {column.name for column in table.columns}
+        all_columns = {column.name for column in table.columns}\n        selected = set(all_columns)
         if column_name is not None:
             column_name = column_name.strip().upper()
             if column_name not in selected:
@@ -141,7 +141,7 @@ class ColumnKnowledge:
             worksheet = workbook[table.worksheet]
             headers = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), ())
             header_positions = {str(value).strip().upper(): index for index, value in enumerate(headers) if value is not None and str(value).strip()}
-            column_names = sorted(selected)
+            column_names = sorted(all_columns if not include_samples else selected)
             stats = {
                 name: {"non_empty": 0, "empty": 0, "types": Counter(), "samples": [], "_seen": set()}
                 for name in column_names
