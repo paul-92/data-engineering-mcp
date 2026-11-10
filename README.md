@@ -127,7 +127,7 @@ Arquivo ausente equivale a nenhum metadado explícito. O documento legado `{"rel
 
 ## Segurança e limitações
 
-Somente SQL Oracle `SELECT/WITH` estruturado é gerado. Não há superfície para DDL/DML, SQL arbitrário em filtros, credenciais, rede, banco ou APIs externas.
+Somente SQL Oracle `SELECT/WITH` estruturado é gerado. Não há superfície para DDL/DML, SQL arbitrário em filtros, credenciais, acesso ao banco ou execução de SQL. O servidor não faz chamadas externas; o cliente MCP pode enviar ao seu modelo o pedido, os metadados retornados e as respostas das ferramentas.
 
 Limitações conhecidas:
 
@@ -151,8 +151,8 @@ O cliente MCP (por exemplo, ChatGPT ou Codex) interpreta o pedido em linguagem n
 - `ensinar_coluna`: registra uma definição e sinônimos fornecidos ou confirmados pelo usuário.
 - `revisar_sql`: analisa `SELECT/WITH` e emite alertas estáticos conservadores, sem reescrever nem executar a consulta.
 
-Por padrão, exemplos brutos não são retornados. `perfil_colunas` aceita `incluir_amostras=true), mas o cliente só deve usar essa opção depois de autorização explícita do usuário. Até cinco valores distintos por coluna podem ser retornados nessa chamada; eles não são persistidos pelo MCP. Os valores retornados passam a fazer parte da resposta da ferramenta e podem ser enviados ao modelo pelo cliente.
+Por padrão, exemplos brutos não são retornados. `perfil_colunas` aceita `incluir_amostras=true`, mas o cliente só deve usar essa opção depois de autorização explícita do usuário. Até cinco valores distintos por coluna podem ser retornados nessa chamada; eles não são persistidos pelo MCP. Os valores retornados passam a fazer parte da resposta da ferramenta e podem ser enviados ao modelo pelo cliente.
 
-O dicionário é salvo em `data/.mcp_column_dictionary.json`; perfis agregados ficam em `data/.mcp_column_profiles.json). Ambos são ignorados pelo Git junto com os dados locais. Use `DATA_ENGINEERING_MCP_COLUMN_DICTIONARY_FILE` e `DATA_ENGINEERING_MCP_COLUMN_PROFILES_FILE` para alterar os caminhos. Perfis são armazenados por fingerprint do arquivo e recalculados após mudança de tamanho, data de modificação ou schema, quando a ferramenta de perfil for chamada.
+O dicionário é salvo em `data/.mcp_column_dictionary.json`; perfis agregados ficam em `data/.mcp_column_profiles.json`. Ambos são ignorados pelo Git junto com os dados locais. Use `DATA_ENGINEERING_MCP_COLUMN_DICTIONARY_FILE` e `DATA_ENGINEERING_MCP_COLUMN_PROFILES_FILE` para alterar os caminhos. Perfis são armazenados por fingerprint do arquivo e recalculados após mudança de tamanho, data de modificação ou schema, quando a ferramenta de perfil for chamada.
 
 `revisar_sql` pode apontar, por exemplo, uso de `SELECT *` e padrão `LIKE` iniciado por curinga. Isso não confirma que a consulta é semanticamente equivalente nem que terá desempenho melhor. O cliente pode propor uma reescrita em linguagem natural; deve explicar as mudanças e preservar filtros, agregações e grão. A validação final do plano e do desempenho depende do Oracle, que este MCP não acessa.
