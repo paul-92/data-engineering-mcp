@@ -46,7 +46,8 @@ O transporte padrão é stdio. Logs vão para stderr para não corromper o proto
 - `listar_tabelas`, `descrever_tabela`, `buscar_coluna`, `buscar_tabelas`
 - `inferir_relacionamentos`, `encontrar_caminho`, `gerar_join`
 - `atualizar_catalogo`, `status_catalogo`
-- `gerar_sql`, `gerar_select`, `explicar_sql`, `revisar_sql`\n- `entender_coluna`, `perfil_colunas`, `ensinar_coluna`
+- `gerar_sql`, `gerar_select`, `explicar_sql`, `revisar_sql`
+- `entender_coluna`, `perfil_colunas`, `ensinar_coluna`
 
 `gerar_sql` recebe `tabelas`, `colunas`, filtros tipados `{table?, column, operator, value}` e `grain` opcional. Operadores: `=`, `<>`, `>`, `>=`, `<`, `<=`, `IN`, `IS NULL`, `IS NOT NULL`, `LIKE`. Valores viram bind variables (`:p1`), nunca texto concatenado. Colunas ambíguas exigem `TABELA.COLUNA`. O JOIN padrão é `LEFT JOIN`, escolha conservadora para preservar linhas da primeira tabela. Consultas multi-tabela só geram JOIN com relacionamento `APPROVED`, livre de conflitos e aceito também pelo controle de confiança; `permitir_baixa_confianca` não contorna autoridade ou conflitos. Relações `INFERRED`, `KNOWN`, sem autoridade ou conflitantes falham com os endpoints e a homologação necessária, sem escolha silenciosa de alternativa. Consultas de uma tabela permanecem inalteradas.
 
