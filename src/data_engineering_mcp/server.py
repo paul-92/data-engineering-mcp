@@ -83,13 +83,16 @@ def entender_coluna(tabela: str, coluna: str) -> dict:
 def perfil_colunas(tabela: str, colunas: list[str] | None = None, incluir_amostras: bool = False) -> dict:
     table = catalog.get_table(tabela)
     selected = [column.strip().upper() for column in colunas] if colunas else [item.name for item in table.columns]
-    profiles = {}
-    for column in selected:
-        try:
-            result = column_knowledge.profile(table.name, column, include_samples=incluir_amostras)
-        except ValueError as exc:
-            raise ToolError(str(exc)) from exc
-        profiles.update(result["columns"])
+    try:
+        result = column_knowledge.profile(table.name, include_samples=incluir_amostras)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    profiles = result["columns"]
+    if colunas:
+        missing = [column for column in selected if column not in profiles]
+        if missing:
+            raise ToolError(f"Colunas inexistentes em {table.name}: {', '.join(missing)}")
+        profiles = {column: profiles[column] for column in selected}
     return {
         "table": table.name,
         "row_count": result["row_count"] if selected else 0,
