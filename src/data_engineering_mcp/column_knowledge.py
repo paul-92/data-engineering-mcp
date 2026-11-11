@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+from decimal import Decimal
 import tempfile
 from collections import Counter
 from datetime import date, datetime, timezone
@@ -120,7 +121,7 @@ class ColumnKnowledge:
         if isinstance(value, bool):
             canonical = f"bool:{value}"
         elif isinstance(value, Number):
-            canonical = f"number:{value}"
+            canonical = f"number:{Decimal(str(value)).normalize()}"
         elif isinstance(value, (datetime, date)):
             canonical = f"{type(value).__name__}:{value.isoformat()}"
         else:
