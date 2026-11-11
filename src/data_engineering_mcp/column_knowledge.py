@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import tempfile
@@ -110,6 +112,76 @@ class ColumnKnowledge:
             "size": stat.st_size,
             "modified_ns": stat.st_mtime_ns,
             "columns": [column.name for column in table.columns],
+        }
+
+    @staticmethod
+    def _comparison_key(value: Any, secret: bytes) -> str:
+        """Retorna um digest efêmero para comparar sem expor nem persistir valores."""
+        if isinstance(value, bool):
+            canonical = f"bool:{value}"
+        elif isinstance(value, Number):
+            canonical = f"number:{value}"
+        elif isinstance(value, (datetime, date)):
+            canonical = f"{type(value).__name__}:{value.isoformat()}"
+        else:
+            canonical = f"text:{str(value).strip()}"
+        return hmac.new(secret, canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    def _column_frequency(self, table_name: str, column_name: str, secret: bytes) -> dict[str, Any]:
+        table = self.catalog.get_table(table_name)
+        column = column_name.strip().upper()
+        if column not in {item.name for item in table.columns}:
+            raise ValueError(f"Coluna inexistente em {table.name}: {column}")
+        path = self.catalog.data_dir / table.source_file
+        workbook = load_workbook(path, read_only=True, data_only=True)
+        frequencies: Counter[str] = Counter()
+        empty = row_count = 0
+        try:
+            worksheet = workbook[table.worksheet]
+            headers = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), ())
+            positions = {str(value).strip().upper(): index for index, value in enumerate(headers) if value is not None and str(value).strip()}
+            position = positions.get(column)
+            if position is None:
+                raise ValueError(f"Cabeçalho não encontrado em {table.name}: {column}")
+            for row in worksheet.iter_rows(min_row=2, values_only=True):
+                if not any(value is not None and str(value).strip() for value in row):
+                    continue
+                row_count += 1
+                value = row[position] if position < len(row) else None
+                if value is None or (isinstance(value, str) and not value.strip()):
+                    empty += 1
+                else:
+                    frequencies[self._comparison_key(value, secret)] += 1
+        finally:
+            workbook.close()
+        return {"table": table.name, "column": column, "row_count": row_count, "empty": empty, "frequencies": frequencies}
+
+    def compare_columns(self, left_table: str, left_column: str, right_table: str, right_column: str) -> dict[str, Any]:
+        """Compara duas colunas locais; retorna somente contagens, nunca valores de célula."""
+        secret = os.urandom(32)
+        left = self._column_frequency(left_table, left_column, secret)
+        right = self._column_frequency(right_table, right_column, secret)
+        left_freq, right_freq = left["frequencies"], right["frequencies"]
+        shared = left_freq.keys() & right_freq.keys()
+        left_distinct, right_distinct = len(left_freq), len(right_freq)
+        return {
+            "left": {"table": left["table"], "column": left["column"], "row_count": left["row_count"],
+                     "empty": left["empty"], "non_empty": sum(left_freq.values()), "distinct": left_distinct,
+                     "duplicate_values": sum(count > 1 for count in left_freq.values()),
+                     "duplicate_rows": sum(count - 1 for count in left_freq.values() if count > 1)},
+            "right": {"table": right["table"], "column": right["column"], "row_count": right["row_count"],
+                      "empty": right["empty"], "non_empty": sum(right_freq.values()), "distinct": right_distinct,
+                      "duplicate_values": sum(count > 1 for count in right_freq.values()),
+                      "duplicate_rows": sum(count - 1 for count in right_freq.values() if count > 1)},
+            "overlap_distinct": len(shared),
+            "matching_left_rows": sum(left_freq[key] for key in shared),
+            "matching_right_rows": sum(right_freq[key] for key in shared),
+            "unmatched_left_rows": sum(count for key, count in left_freq.items() if key not in right_freq),
+            "unmatched_right_rows": sum(count for key, count in right_freq.items() if key not in left_freq),
+            "potential_inner_join_rows": sum(left_freq[key] * right_freq[key] for key in shared),
+            "left_values_matching_multiple_right_rows": sum(left_freq[key] for key in shared if right_freq[key] > 1),
+            "raw_values_returned": False,
+            "notice": "Contagens exatas calculadas localmente; valores de célula não são retornados nem persistidos.",
         }
 
     def profile(self, table_name: str, column_name: str | None = None, include_samples: bool = False) -> dict[str, Any]:
