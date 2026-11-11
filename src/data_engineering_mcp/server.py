@@ -102,6 +102,13 @@ def perfil_colunas(tabela: str, colunas: list[str] | None = None, incluir_amostr
     }
 
 
+@mcp.tool(description="Compara estatísticas agregadas de duas colunas em XLSX locais; não retorna nem persiste valores das células.")
+def comparar_colunas(tabela_esquerda: str, coluna_esquerda: str, tabela_direita: str, coluna_direita: str) -> dict:
+    try:
+        return column_knowledge.compare_columns(tabela_esquerda, coluna_esquerda, tabela_direita, coluna_direita)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+
 @mcp.tool(description="Ensina ou corrige uma definição confirmada de coluna. Chame somente com definição fornecida ou confirmada pelo usuário.")
 def ensinar_coluna(tabela: str, coluna: str, definicao: str, sinonimos: list[str] | None = None) -> dict:
     try:
